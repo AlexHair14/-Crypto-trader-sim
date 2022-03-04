@@ -3,6 +3,8 @@ import time
 
 API = CoinGeckoAPI()
 
+
+
 assets = {}
 
 wallet = 100
@@ -35,7 +37,9 @@ def calc_percent_change(old_price):
     return percent_change
 
 
-def buy_asset(asset_name, percent_to_buy, wallet, asset_dic):
+def buy_asset(asset_name, percent_to_buy):
+    global assets
+    global wallet
     if wallet < 0.01:
         return False
     money_to_spend = wallet * percent_to_buy
@@ -44,39 +48,41 @@ def buy_asset(asset_name, percent_to_buy, wallet, asset_dic):
     wallet -= money_to_spend
 
     # if there are assets
-    if asset_dic:
+    if assets:
         # if the asset we are buying is in the dictionary
-        if asset_dic.get(asset_name):
+        if assets.get(asset_name):
             # updates asset dictionary to reflect new amount of asset owned
-            amount_prev_owned = asset_dic.get(asset_name)
+            amount_prev_owned = assets.get(asset_name)
             total_of_asset = amount_prev_owned + new_asset
-            asset_dic[asset_name] = total_of_asset
+            assets[asset_name] = total_of_asset
 
 
     #if there are no assets
-    if not asset_dic:
+    if not assets:
         # create a new asset
-        asset_dic.update({asset_name : (new_asset)})
+        assets.update({asset_name : (new_asset)})
         print('there are no assets')
-    print(asset_dic)
+    print(assets)
     print('wallet amount:', wallet)
     return
 
 
-def sell_asset(asset_name, percent_to_sell, wallet, asset_dic):
+def sell_asset(asset_name, percent_to_sell):
+    global assets
+    global wallet
     current_price = get_price(asset_name)
     # if asset_dictionary has stuff in it
-    if asset_dic:
+    if assets:
         #if asset we are trying to sell is in the asset dictionary
-        if asset_dic.get(asset_name):
+        if assets.get(asset_name):
             # find how much I own
-            amount_prev_owned = asset_dic.get(asset_name)
+            amount_prev_owned = assets.get(asset_name)
 
             amount_selling = amount_prev_owned * percent_to_sell
             # subtract amount selling from amount owned
             total_of_asset = amount_prev_owned - amount_selling
             # update the new total asset amount after selling
-            asset_dic[asset_name] = total_of_asset
+            assets[asset_name] = total_of_asset
 
 
     # if there is nothing to sell then returns as false
@@ -86,7 +92,7 @@ def sell_asset(asset_name, percent_to_sell, wallet, asset_dic):
 
     cash_to_gain = amount_selling * current_price
     wallet += cash_to_gain
-    print(asset_dic)
+    print(assets)
     print('wallet amount:',wallet)
 
 
@@ -104,11 +110,11 @@ while program_on:
         print(percent_change)
     if percent_change > .015:
         # if asset is up by .015% or more we want to buy all we can with 90% of our wallet
-        buy_asset('bitcoin', 0.9, wallet,assets)
+        buy_asset('bitcoin', 0.9)
 
     if percent_change < 0.015:
-        # if asset is down by .015% or more we need to sell 100% of our crypto assets
-        sell_asset('bitcoin', 0.9, wallet, assets)
+        # if asset is down by .015% or more we need to sell our crypto asset
+        sell_asset('bitcoin', 0.9)
 
     current_price = get_price('bitcoin')
     old_price = current_price
