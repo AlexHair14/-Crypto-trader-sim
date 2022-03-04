@@ -1,129 +1,116 @@
 from pycoingecko import CoinGeckoAPI
 import time
 
+API = CoinGeckoAPI()
 
-def if_odd(number):
-    if number % 2 == 0:
-        return False
-    else:
-        return True
-    #if number is odd then function returns true
+assets = {}
 
-
-def if_even(number):
-    if number % 2 == 0:
-        return True
-    else:
-        return False
-    # if number is even then function returns true
-
-
-def if_list_full(list):
-    if list:
-        return True
-    else:
-        return False
+wallet = 100
 
 
 def get_time():
     # gets the current time in Unix time
-    Curr_time = str(time.time())
-    Curr_time = (Curr_time[0:10])
-    return Curr_time
-
-
-def get_history_over_24(coin):
-    while True:
-        # 24 hour period
-        Curr_time = get_time()
-        Prev_Day = int(Curr_time) - 86400
-        str(Prev_Day)
-        TA = API.get_coin_market_chart_range_by_id(id=coin, vs_currency='usd', from_timestamp=Prev_Day, to_timestamp=Curr_time)
-        TA = TA['prices']
-        time.sleep(1.5)
-        if if_list_full(TA):
-            return TA
+    curr_time = str(time.time())
+    curr_time = (curr_time[0:10])
+    return curr_time
 
 
 def get_price(coin):
-    p = API.get_price(coin, 'usd')
-    p = p[coin]
-    p = p['usd']
-    p = int(p)
-    return p
+        API = CoinGeckoAPI()
+        p = API.get_price(coin,'usd')
+        p = p[coin]
+        p = p['usd']
+        p = int(p)
+        return p
 
 
+old_price = get_price('bitcoin')
 
-'''
-while program_on:
-    TA = get_history_over_24('bitcoin')
-    for item in TA:
-        data_entry = item
-        entry_time = data_entry[0]
-        entry_price = data_entry[1]
-        print(entry_time, entry_price) #This was for using the history but it doesn't give live feedback of price
+def calc_percent_change(old_price):
+    # If New Price - Old price / old price * 100 = calc. This calculates the % increase or decrease
+    current_price = get_price('bitcoin')
+    percent_change = current_price - old_price
+    percent_change = percent_change / old_price
+    percent_change = percent_change * 100
+    return percent_change
 
-'''
 
-# creates an api object, so you can interact with the api
-API = CoinGeckoAPI()
+def buy_asset(asset_name, percent_to_buy, wallet, asset_dic):
+    if wallet < 0.01:
+        return False
+    money_to_spend = wallet * percent_to_buy
+    current_price = get_price(asset_name)
+    new_asset = money_to_spend / current_price
+    wallet -= money_to_spend
+
+    # if there are assets
+    if asset_dic:
+        # if the asset we are buying is in the dictionary
+        if asset_dic.get(asset_name):
+            # updates asset dictionary to reflect new amount of asset owned
+            amount_prev_owned = asset_dic.get(asset_name)
+            total_of_asset = amount_prev_owned + new_asset
+            asset_dic[asset_name] = total_of_asset
+
+
+    #if there are no assets
+    if not asset_dic:
+        # create a new asset
+        asset_dic.update({asset_name : (new_asset)})
+        print('there are no assets')
+    print(asset_dic)
+    print('wallet amount:', wallet)
+    return
+
+
+def sell_asset(asset_name, percent_to_sell, wallet, asset_dic):
+    current_price = get_price(asset_name)
+    # if asset_dictionary has stuff in it
+    if asset_dic:
+        #if asset we are trying to sell is in the asset dictionary
+        if asset_dic.get(asset_name):
+            # find how much I own
+            amount_prev_owned = asset_dic.get(asset_name)
+
+            amount_selling = amount_prev_owned * percent_to_sell
+            # subtract amount selling from amount owned
+            total_of_asset = amount_prev_owned - amount_selling
+            # update the new total asset amount after selling
+            asset_dic[asset_name] = total_of_asset
+
+
+    # if there is nothing to sell then returns as false
+    else:
+        return False
+    # need to get amount to subtract from
+
+    cash_to_gain = amount_selling * current_price
+    wallet += cash_to_gain
+    print(asset_dic)
+    print('wallet amount:',wallet)
+
 
 program_on = True
-old_price = get_price('bitcoin')
-wallet = 100
-coin_asset = 0
+
+connection_attemps = 0
+
+asset_to_trade = input('what coin do you want to trade')
 
 while program_on:
-    #so you don't spam requests
     time.sleep(5)
-    # makes sure you are connected to server, probably not needed, but I thought it was cool
-    server_responsive = API.ping()
-    if server_responsive:
 
-        # If New Price - Old price / old price * 100 = calc. This calculates the % increase or decrease
-        current_price = get_price('bitcoin')
-        percent_change = current_price - old_price
-        percent_change = percent_change / old_price
-        percent_change = percent_change * 100
+    percent_change = calc_percent_change(old_price)
+    if not percent_change == 0:
+        print(percent_change)
+    if percent_change > .015:
+        # if asset is up by .015% or more we want to buy all we can with 90% of our wallet
+        buy_asset('bitcoin', 0.9, wallet,assets)
 
-        #if there is a percentage change from previous iteration then tell us
-        if not percent_change == 0.0:
-            print('percentage change:', percent_change)
+    if percent_change < 0.015:
+        # if asset is down by .015% or more we need to sell 100% of our crypto assets
+        sell_asset('bitcoin', 0.9, wallet, assets)
 
-
-        if percent_change > .015 and wallet > 0.01:
-            # if asset is up by 15% or more we want to buy all we can with 90% of our wallet
-            money_to_spend = wallet * 0.9
-            new_asset = money_to_spend / current_price
-            coin_asset =+ new_asset
-            wallet =-money_to_spend
-            print('wallet ammount:', wallet)
-            print('coin asset amount:', coin_asset)
-
-
-        if percent_change < -.015 and coin_asset > 0:
-            # if asset is down by 15% or more we need to sell 100% of our crypto assets
-            coin_to_sub = coin_asset
-            coin_asset =- coin_to_sub
-            cash_to_gain = coin_to_sub * current_price
-            wallet =+ cash_to_gain
-            print('wallet ammount:',wallet)
-            print('coin asset amount:', coin_asset)
-
-        # if we go into negative money it terminates the program
-        if wallet < 0.01 and coin_asset == 0:
-            program_on = False
-
-
-        old_price = current_price
-    else:
-        print("No Server Response")
-
-
-
-
-
-
-
+    current_price = get_price('bitcoin')
+    old_price = current_price
 
 
