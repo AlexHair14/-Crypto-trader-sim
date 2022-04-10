@@ -1,122 +1,52 @@
-from pycoingecko import CoinGeckoAPI
-import time
-
-API = CoinGeckoAPI()
+import yfinance as yf
 
 
+# need to create a program which finds the best asset to trade 
+asset_to_trade = 'bitcoin'
 
-assets = {}
+# These could be used to adjust how much money you spend on an asset or sell 
+# based on how confident you are on what the market is doing 
+purchase_percentage = 0.9
+selling_percentage = 0.9
 
-wallet = 100
+total_cash = 100 
 
+# When a transaction occurs how much is the asset worth
+price_of_asset = 1
 
-def get_time():
-    # gets the current time in Unix time
-    curr_time = str(time.time())
-    curr_time = (curr_time[0:10])
-    return curr_time
+# How much of an asset do you own before anything happens 
+amount_of_asset_before_sale = 100 
 
-
-def get_price(coin):
-        API = CoinGeckoAPI()
-        p = API.get_price(coin,'usd')
-        p = p[coin]
-        p = p['usd']
-        p = int(p)
-        return p
-
-
-old_price = get_price('bitcoin')
-
-def calc_percent_change(old_price):
-    # If New Price - Old price / old price * 100 = calc. This calculates the % increase or decrease
-    current_price = get_price('bitcoin')
-    percent_change = current_price - old_price
-    percent_change = percent_change / old_price
-    percent_change = percent_change * 100
-    return percent_change
+class info:
+    def __init__(self):
+        self.cash = total_cash
+        self.name = asset_to_trade
+        self.percent_to_buy = purchase_percentage
+        self.percent_to_sell = selling_percentage
+        self.current_price = price_of_asset
+        self.asset_before_sale = amount_of_asset_before_sale
 
 
-def buy_asset(asset_name, percent_to_buy):
-    global assets
-    global wallet
-    if wallet < 0.01:
-        return False
-    money_to_spend = wallet * percent_to_buy
-    current_price = get_price(asset_name)
-    new_asset = money_to_spend / current_price
-    wallet -= money_to_spend
+    def buy_asset(self):
+        money_to_spend = self.cash * self.percent_to_buy
+        new_asset_amount = money_to_spend / self.current_price
+        cash_after = self.cash - money_to_spend
+        buying_info = {
+            'Total cash after trans' : cash_after,
+            'Total of new asset' : new_asset_amount,
+            'Money spent' : money_to_spend,
+        }
+        return buying_info
+        
 
-    # if there are assets
-    if assets:
-        # if the asset we are buying is in the dictionary
-        if assets.get(asset_name):
-            # updates asset dictionary to reflect new amount of asset owned
-            amount_prev_owned = assets.get(asset_name)
-            total_of_asset = amount_prev_owned + new_asset
-            assets[asset_name] = total_of_asset
-
-
-    #if there are no assets
-    if not assets:
-        # create a new asset
-        assets.update({asset_name : (new_asset)})
-        print('there are no assets')
-    print(assets)
-    print('wallet amount:', wallet)
-    return
-
-
-def sell_asset(asset_name, percent_to_sell):
-    global assets
-    global wallet
-    current_price = get_price(asset_name)
-    # if asset_dictionary has stuff in it
-    if assets:
-        #if asset we are trying to sell is in the asset dictionary
-        if assets.get(asset_name):
-            # find how much I own
-            amount_prev_owned = assets.get(asset_name)
-
-            amount_selling = amount_prev_owned * percent_to_sell
-            # subtract amount selling from amount owned
-            total_of_asset = amount_prev_owned - amount_selling
-            # update the new total asset amount after selling
-            assets[asset_name] = total_of_asset
-
-
-    # if there is nothing to sell then returns as false
-    else:
-        return False
-    # need to get amount to subtract from
-
-    cash_to_gain = amount_selling * current_price
-    wallet += cash_to_gain
-    print(assets)
-    print('wallet amount:',wallet)
-
-
-program_on = True
-
-connection_attemps = 0
-
-asset_to_trade = input('what coin do you want to trade')
-
-while program_on:
-    time.sleep(5)
-
-    percent_change = calc_percent_change(old_price)
-    if not percent_change == 0:
-        print(percent_change)
-    if percent_change > .015:
-        # if asset is up by .015% or more we want to buy all we can with 90% of our wallet
-        buy_asset('bitcoin', 0.9)
-
-    if percent_change < 0.015:
-        # if asset is down by .015% or more we need to sell our crypto asset
-        sell_asset('bitcoin', 0.9)
-
-    current_price = get_price('bitcoin')
-    old_price = current_price
-
+    def sell_asset(self):
+        amount_selling = self.asset_before_sale * self.percent_to_sell
+        cash_after = amount_selling * self.current_price
+        new_asset_amount = self.asset_before_sale - amount_selling
+        selling_info = {
+            'Total cash after trans' : cash_after,
+            'Total of new asset' : new_asset_amount,
+            'Amount of asset sold' : amount_selling,
+        }
+        return selling_info
 
